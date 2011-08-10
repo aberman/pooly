@@ -1,0 +1,13 @@
+{application, pooly,
+ [
+  {description, ""},
+  {vsn, "1"},
+  {registered, []},
+  {applications, [
+                  kernel,
+                  stdlib,
+                  lager        
+                 ]},
+  {mod, { pooly_app, []}},
+  {env, []}
+ ]}.
