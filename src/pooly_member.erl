@@ -7,26 +7,26 @@
 %% ------------------------------------------------------------------
 
 -export([
-		 start_link/5, 
-		 get_pid/1
-		]).
+         start_link/5, 
+         get_pid/1
+        ]).
 
 %% ------------------------------------------------------------------
 %% gen_fsm Function Exports
 %% ------------------------------------------------------------------
 
 -export([code_change/4,
-		 handle_event/3,
-		 handle_info/3,
-		 handle_sync_event/4,
-		 init/1,
-		 terminate/3]).
+         handle_event/3,
+         handle_info/3,
+         handle_sync_event/4,
+         init/1,
+         terminate/3]).
 
 -export([
-		 active/2,		
-		 idle/3,
+         active/2,		
+         idle/3,
          idle/2
-		 ]).
+        ]).
 
 -record(state, {pid, timer, idle_timeout, max_age}).
 
@@ -38,14 +38,14 @@ start_link(Host, Port, Options, IdleTimeout, MaxAge) ->
     gen_fsm:start_link(?MODULE, [Host, Port, Options, IdleTimeout, MaxAge], []).
 
 get_pid(Pid) ->
-	gen_fsm:sync_send_event(Pid, activate).
-	
+    gen_fsm:sync_send_event(Pid, activate).
+
 %% ------------------------------------------------------------------
 %% gen_fsm Function Definitions
 %% ------------------------------------------------------------------
 
 init([Host, Port, Options, IdleTimeout, MaxAge]) ->
-	process_flag(trap_exit, true),
+    process_flag(trap_exit, true),
     {ok, Pid} = riakc_pb_socket:start_link(Host, Port, Options),        
     erlang:link(Pid),
     
@@ -62,9 +62,9 @@ init([Host, Port, Options, IdleTimeout, MaxAge]) ->
     end.
 
 idle(activate, _From, State) ->
-	{reply, {ok, State#state.pid}, active, State};
+    {reply, {ok, State#state.pid}, active, State};
 idle(_Event, _From, State) ->
-	{next_state, idle, State, State#state.idle_timeout}.
+    {next_state, idle, State, State#state.idle_timeout}.
 
 idle(timeout, State) -> 
     %% Send message that I timed out but don't necessarily quit, let pooly terminate me
@@ -80,17 +80,17 @@ idle(_Event, State) ->
     {next_state, idle, State}.
 
 active(deactivate, State) ->
-	{next_state, idle, State, State#state.idle_timeout};
+    {next_state, idle, State, State#state.idle_timeout};
 active(_Event, State) ->
     {next_state, active, State}.
 
 handle_event(stop, _StateName, State) ->
-	{stop, normal, State};
-handle_event(Event, _State_Name, State) ->
-    {stop, {unsupported_event, Event}, State}.
+    {stop, normal, State};
+handle_event(_Event, State_Name, State) ->
+    {next_state, State_Name, State}.
 
 handle_sync_event(_Event, _From, StateName, State) ->
-    {reply, ok, StateName, State}.
+    {next_state, StateName, State}.
 
 handle_info({'EXIT', Pid, _Reason}, _StateName, State) ->     
     error_logger:info_msg("~s exited", [pid_to_list(Pid)]),

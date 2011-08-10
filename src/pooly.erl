@@ -171,9 +171,13 @@ handle_event({expired, Pid}, StateName, State) ->
         true -> handle_event({cleanup, Pid}, StateName, State);
         false -> {next_state, StateName, State#state{expired = [Pid | State#state.expired]}}
     end;   
-handle_event({timed_out, Pid}, StateName, State) ->    
-    handle_event({cleanup, Pid}, StateName, State);          
-
+handle_event({timed_out, Pid}, StateName, State) ->
+    try
+        State#state.q_len > State#state.min_pool_size orelse throw(ready),
+        handle_event({cleanup, Pid}, StateName, State)
+    catch
+        throw:ready -> {next_state, ready, State}
+    end;
 handle_event(_Event, StateName, State) ->
     {next_state, StateName, State}.
 
