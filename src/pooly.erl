@@ -66,8 +66,7 @@ check_out() ->
     Reply.
 
 check_in(Pid) ->
-    gen_fsm:send_event(?SERVER, {check_in, Pid}),
-    gen_fsm:send_event(?SERVER, update).
+    gen_fsm:send_event(?SERVER, {check_in, Pid}).    
 
 %% ====================================================================
 %% Server functions
@@ -146,8 +145,8 @@ busy(_Event, State) ->
 busy(_Event, _From, State) ->
     {reply, {error, busy}, busy, State}.
 
-exhausted({check_in, Pid}, State) ->	
-    {next_state, busy, check_in(Pid, State)};
+exhausted({check_in, Pid}, State) ->
+    busy(update, check_in(Pid, State));    
 exhausted(_Event, State) ->
     {next_state, exhausted, State}.
 
@@ -253,6 +252,7 @@ check_in(CPid, #state{} = State) ->
                                 expired = lists:delete(Pid, State#state.expired), 
                                 out = Out};
                 false ->
+                    pooly_member:put_pid(Pid),
                     State#state{q = queue:in(Pid, Q), q_len = QLen + 1, out = Out}
             end;
         false -> State

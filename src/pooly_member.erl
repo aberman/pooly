@@ -8,7 +8,8 @@
 
 -export([
          start_link/5, 
-         get_pid/1
+         get_pid/1,
+         put_pid/1
         ]).
 
 %% ------------------------------------------------------------------
@@ -39,6 +40,9 @@ start_link(Host, Port, Options, IdleTimeout, MaxAge) ->
 
 get_pid(Pid) ->
     gen_fsm:sync_send_event(Pid, activate).
+
+put_pid(Pid) ->
+    gen_fsm:send_event(Pid, deactivate).
 
 %% ------------------------------------------------------------------
 %% gen_fsm Function Definitions
