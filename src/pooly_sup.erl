@@ -14,7 +14,6 @@ start_link() ->
     supervisor:start_link({local, ?MODULE}, ?MODULE, []).
 
 init([]) ->
-%%     Config = application:get_all_env(),
     Pooly = {pooly, {pooly, start_link, []},
             permanent, 5000, worker, [pooly]},
     PoolSup = {pooly_member_sup, {pooly_member_sup, start_link, []},
