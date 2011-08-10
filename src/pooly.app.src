@@ -5,8 +5,7 @@
   {registered, []},
   {applications, [
                   kernel,
-                  stdlib,
-                  lager        
+                  stdlib                     
                  ]},
   {mod, { pooly_app, []}},
   {env, []}
