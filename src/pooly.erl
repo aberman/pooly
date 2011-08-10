@@ -115,7 +115,7 @@ ready(check_out, _From, State) ->
     % Q should never be empty if pooly is ready
     {{value, Pid}, Q2} = queue:out(State#state.q),	
     NewQLen = State#state.q_len - 1,
-    {ok, CPid} = pooly_member:get_pid(Pid),    
+    {ok, CPid} = pooly_member:activate(Pid),    
     {reply, {ok, CPid} , busy, State#state{q = Q2, q_len = NewQLen, out = [{CPid, Pid} |State#state.out]}};
 ready(_Event, _From, State) ->
     {next_state, ready, State}.
@@ -252,7 +252,7 @@ check_in(CPid, #state{} = State) ->
                                 expired = lists:delete(Pid, State#state.expired), 
                                 out = Out};
                 false ->
-                    pooly_member:put_pid(Pid),
+                    pooly_member:deactivate(Pid),
                     State#state{q = queue:in(Pid, Q), q_len = QLen + 1, out = Out}
             end;
         false -> State
