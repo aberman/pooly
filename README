@@ -11,3 +11,13 @@ Quick Start
 > riakc_pb_socket:ping(Pid).
 pong
 > pooly:check_in(Pid).
+
+API
+---
+{ok, Pid} = pooly:check_out - Checks out a process
+
+pooly:check_in(Pid) - Checks in a process
+
+pooly:size() - Returns the size of the idle queue
+
+pooly:total() - Returns the total number of processes idle and active
