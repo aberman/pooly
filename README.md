@@ -24,7 +24,7 @@ pooly:total() - Returns the total number of processes idle and active
 
 ## License & Copyright
 
-Copyright ©2011 Andrew Berman
+Copyright &copy;2011 Andrew Berman
 
 Licensed under the Apache License, Version 2.0 (the "License"); 
 you may not use this file except in compliance with the License. 
