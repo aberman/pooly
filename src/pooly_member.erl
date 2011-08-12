@@ -1,3 +1,9 @@
+%%% -------------------------------------------------------------------
+%%% Author  : Andrew Berman
+%%% Description :
+%%%
+%%% Created : Aug 4, 2011
+%%% -------------------------------------------------------------------
 -module(pooly_member).
 -behaviour(gen_fsm).
 -define(SERVER, ?MODULE).
