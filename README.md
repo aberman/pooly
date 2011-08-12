@@ -1,8 +1,8 @@
-Riak Process Pool
-=================
+# Riak Process Pool
 
-Quick Start
------------
+
+## Quick Start
+
 1.  Configure pool changing settings in priv/pooly.conf
 2.  Start up erl
 
@@ -12,8 +12,8 @@ Quick Start
 pong
 > pooly:check_in(Pid).
 
-API
----
+## API
+
 {ok, Pid} = pooly:check_out - Checks out a process
 
 pooly:check_in(Pid) - Checks in a process
@@ -22,8 +22,7 @@ pooly:size() - Returns the size of the idle queue
 
 pooly:total() - Returns the total number of processes idle and active
 
-License & Copyright
-===================
+## License & Copyright
 
 Copyright ©2011 Andrew Berman
 
