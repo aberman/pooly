@@ -6,11 +6,13 @@
 1.  Configure pool changing settings in priv/pooly.conf
 2.  Start up erl
 
+```
 > application:start(pooly).
 > {ok, Pid} = pooly:check_out().
 > riakc_pb_socket:ping(Pid).
 pong
 > pooly:check_in(Pid).
+```
 
 ## API
 
