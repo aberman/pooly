@@ -1,16 +1,14 @@
-# Riak Process Pool
+# OTP Process Pool
 
 
 ## Quick Start
 
-1.  Configure pool changing settings in priv/pooly.conf
+1.  Configure pool by changing settings in priv/pooly.conf.  Pooly only calls function start_link/3 on any OTP compliant server or fsm
 2.  Start up erl
 
 ```
 > application:start(pooly).
 > {ok, Pid} = pooly:check_out().
-> riakc_pb_socket:ping(Pid).
-pong
 > pooly:check_in(Pid).
 ```
 
