@@ -46,7 +46,7 @@
          ready/3
         ]).
 
--record(state, {host, port, options, q, q_len = 0, total = 0, out = [], expired = [], acquire_increment, initial_pool_size, max_pool_size, min_pool_size, max_idle_time, max_age}).
+-record(state, {ma, q, q_len = 0, total = 0, out = [], expired = [], acquire_increment, initial_pool_size, max_pool_size, min_pool_size, max_idle_time, max_age}).
 
 %% ====================================================================
 %% External functions
@@ -82,6 +82,10 @@ init([]) ->
     {ok, Conf} = file:consult(filename:join(
                                 [filename:dirname(code:which(?MODULE)),
                                  "..", "priv", "pooly.conf"])),
+    Module = proplists:get_value(module, Conf),
+    Args = proplists:get_value(args, Conf, []),
+    
+    Module =/= undefined orelse exit({error, no_module_defined}),
     InitialPoolSize = proplists:get_value(initial_pool_size, Conf, ?DEFAULT_INITIAL_POOL_SIZE),
     AcquireIncrement = proplists:get_value(acquire_increment, Conf, ?DEFAULT_ACQUIRE_INCREMENT),
     InitialPoolSize = proplists:get_value(initial_pool_size, Conf, ?DEFAULT_INITIAL_POOL_SIZE),
@@ -89,13 +93,9 @@ init([]) ->
     MinPoolSize = proplists:get_value(min_pool_size, Conf, ?DEFAULT_MIN_POOL_SIZE),
     MaxIdleTime = proplists:get_value(idle_timeout, Conf, ?DEFAULT_IDLE_TIMEOUT),
     MaxAge = proplists:get_value(max_age, Conf, ?DEFAULT_MAX_AGE),
-    Host = proplists:get_value(host, Conf, ?DEFAULT_HOST),
-    Port = proplists:get_value(port, Conf, ?DEFAULT_PORT),    
-    Options = proplists:get_value(options, Conf, []),
+        
     MinPoolSize < MaxPoolSize orelse exit("min_pool_size must be less than max_pool_size"),
-    State = #state{host = Host, 
-                   port = Port, 
-                   options = Options,
+    State = #state{ma = {Module, Args},
                    acquire_increment = AcquireIncrement,
                    initial_pool_size = InitialPoolSize,
                    max_age = MaxAge,
@@ -230,9 +230,7 @@ new_connection(#state{} = State, Count) ->
 new_connection(#state{} = _State, 0, Acc) ->
     Acc;
 new_connection(#state{} = State, Count, Acc) ->
-    case supervisor:start_child(pooly_member_sup, [State#state.host, 
-                                                   State#state.port, 
-                                                   State#state.options, 
+    case supervisor:start_child(pooly_member_sup, [State#state.ma, 
                                                    State#state.max_idle_time, 
                                                    State#state.max_age]) of
         {ok, Pid} when is_pid(Pid) -> new_connection(State, Count - 1, [Pid | Acc]);

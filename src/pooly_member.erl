@@ -13,7 +13,7 @@
 %% ------------------------------------------------------------------
 
 -export([
-         start_link/5, 
+         start_link/3, 
          activate/1,
          deactivate/1
         ]).
@@ -41,8 +41,8 @@
 %% API Function Definitions
 %% ------------------------------------------------------------------
 
-start_link(Host, Port, Options, IdleTimeout, MaxAge) ->	
-    gen_fsm:start_link(?MODULE, [Host, Port, Options, IdleTimeout, MaxAge], []).
+start_link(MA, IdleTimeout, MaxAge) ->	
+    gen_fsm:start_link(?MODULE, [MA, IdleTimeout, MaxAge], []).
 
 activate(Pid) ->
     gen_fsm:sync_send_event(Pid, activate).
@@ -54,9 +54,9 @@ deactivate(Pid) ->
 %% gen_fsm Function Definitions
 %% ------------------------------------------------------------------
 
-init([Host, Port, Options, IdleTimeout, MaxAge]) ->
+init([{M, A}, IdleTimeout, MaxAge]) ->
     process_flag(trap_exit, true),
-    {ok, Pid} = riakc_pb_socket:start_link(Host, Port, Options),        
+    {ok, Pid} = erlang:apply(M, start_link, A),        
     erlang:link(Pid),
     
     case MaxAge > 0 andalso MaxAge =/= infinity of
