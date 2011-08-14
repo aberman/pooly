@@ -10,24 +10,16 @@
 %% --------------------------------------------------------------------
 %% Include files
 %% --------------------------------------------------------------------
--define(DEFAULT_ACQUIRE_INCREMENT, 3).
--define(DEFAULT_INITIAL_POOL_SIZE, 5).
--define(DEFAULT_MAX_POOL_SIZE, infinity).
--define(DEFAULT_MIN_POOL_SIZE, 3).
--define(DEFAULT_IDLE_TIMEOUT, 2 * 60 * 60 * 1000).
--define(DEFAULT_MAX_AGE, infinity).
--define(DEFAULT_PORT, 8087).
--define(DEFAULT_HOST, "127.0.0.1").
 
 -define(SERVER, ?MODULE).
 %% --------------------------------------------------------------------
 %% External exports
--export([
-         check_in/1,
-         check_out/0,
-         size/0,
-         start_link/0,		 
-         total/0
+-export([         
+         start_link/2,		 
+         check_in/2,
+         check_out/1,
+         size/1,
+         total/1
         ]).
 
 %% gen_fsm callbacks
@@ -46,27 +38,28 @@
          ready/3
         ]).
 
--record(state, {ma, q, q_len = 0, total = 0, out = [], expired = [], acquire_increment, initial_pool_size, max_pool_size, min_pool_size, max_idle_time, max_age}).
+-include("record.hrl").
+-record(state, {ma, q, q_len = 0, total = 0, out = [], expired = [], config, name, sup_name}).
 
 %% ====================================================================
 %% External functions
 %% ====================================================================
-start_link() ->
-    gen_fsm:start_link({local, ?SERVER}, ?MODULE, [], []).
+start_link(Name, #config{} = Config) ->
+    gen_fsm:start_link({local, Name}, ?MODULE, [Config, Name], []).
 
-size() ->
-    gen_fsm:sync_send_all_state_event(?SERVER, size).
+size(Name) ->
+    gen_fsm:sync_send_all_state_event(Name, size).
 
-total() ->
-    gen_fsm:sync_send_all_state_event(?SERVER, total).
+total(Name) ->
+    gen_fsm:sync_send_all_state_event(Name, total).
 
-check_out() ->
-    Reply = gen_fsm:sync_send_event(?SERVER, check_out),
-    gen_fsm:send_event(?SERVER, update),
+check_out(Name) ->
+    Reply = gen_fsm:sync_send_event(Name, check_out),
+    gen_fsm:send_event(Name, update),
     Reply.
 
-check_in(Pid) ->
-    gen_fsm:send_event(?SERVER, {check_in, Pid}).    
+check_in(Name, Pid) ->
+    gen_fsm:send_event(Name, {check_in, Pid}).
 
 %% ====================================================================
 %% Server functions
@@ -78,36 +71,21 @@ check_in(Pid) ->
 %%          ignore                              |
 %%          {stop, StopReason}
 %% --------------------------------------------------------------------
-init([]) ->	
-    {ok, Conf} = file:consult(filename:join(
-                                [filename:dirname(code:which(?MODULE)),
-                                 "..", "priv", "pooly.conf"])),
-    Module = proplists:get_value(module, Conf),
-    Args = proplists:get_value(args, Conf, []),
-    
-    Module =/= undefined orelse exit({error, no_module_defined}),
-    InitialPoolSize = proplists:get_value(initial_pool_size, Conf, ?DEFAULT_INITIAL_POOL_SIZE),
-    AcquireIncrement = proplists:get_value(acquire_increment, Conf, ?DEFAULT_ACQUIRE_INCREMENT),
-    InitialPoolSize = proplists:get_value(initial_pool_size, Conf, ?DEFAULT_INITIAL_POOL_SIZE),
-    MaxPoolSize = proplists:get_value(max_pool_size, Conf, ?DEFAULT_MAX_POOL_SIZE),
-    MinPoolSize = proplists:get_value(min_pool_size, Conf, ?DEFAULT_MIN_POOL_SIZE),
-    MaxIdleTime = proplists:get_value(idle_timeout, Conf, ?DEFAULT_IDLE_TIMEOUT),
-    MaxAge = proplists:get_value(max_age, Conf, ?DEFAULT_MAX_AGE),
-        
-    MinPoolSize < MaxPoolSize orelse exit("min_pool_size must be less than max_pool_size"),
-    State = #state{ma = {Module, Args},
-                   acquire_increment = AcquireIncrement,
-                   initial_pool_size = InitialPoolSize,
-                   max_age = MaxAge,
-                   max_idle_time = MaxIdleTime,
-                   max_pool_size = MaxPoolSize,
-                   min_pool_size = MinPoolSize,					   
+init([#config{} = Config, Name]) ->    
+    NameStr = case is_atom(Name) of 
+        true -> atom_to_list(Name);
+        false -> Name
+    end,
+    InitialPoolSize = Config#config.initial_pool_size,
+    State = #state{config = Config,					   
                    q_len = InitialPoolSize,
-                   total = InitialPoolSize},
+                   total = InitialPoolSize,
+                   name = Name,
+                   sup_name = list_to_existing_atom(NameStr ++ "_sup")},
     {ok, ready, State#state{q = queue:from_list(new_connection(State, InitialPoolSize))}}.
 
 ready({check_in, Pid}, State) ->	
-    {next_state, ready, check_in(Pid, State)};
+    {next_state, ready, internal_check_in(Pid, State)};
 ready(_Event, State) ->
     {next_state, ready, State}.
 
@@ -121,23 +99,7 @@ ready(_Event, _From, State) ->
     {next_state, ready, State}.
 
 busy(update, State) ->
-    try
-        State#state.q_len < State#state.min_pool_size orelse throw(ready),
-        
-        MaxPoolSize = State#state.max_pool_size,
-        Total = State#state.total,
-        Diff = MaxPoolSize - Total,				
-        Diff + State#state.q_len > 0 orelse throw(exhausted),
-        
-        Increment = erlang:min(State#state.acquire_increment, Diff),		
-        {next_state, ready, State#state{q = queue:join(State#state.q,
-                                                       queue:from_list(new_connection(State, Increment))),
-                                        q_len = State#state.q_len + Increment,
-                                        total = Total + Increment}}		
-    catch
-        throw:exhausted -> {next_state, exhausted, State};
-        throw:ready -> {next_state, ready, State}
-    end;
+    update_state(State);
 %% Should we add a timeout here? We don't want it to remain busy forever.
 busy(_Event, State) ->
     {next_state, busy, State}.
@@ -146,7 +108,7 @@ busy(_Event, _From, State) ->
     {reply, {error, busy}, busy, State}.
 
 exhausted({check_in, Pid}, State) ->
-    busy(update, check_in(Pid, State));    
+    busy(update, internal_check_in(Pid, State));    
 exhausted(_Event, State) ->
     {next_state, exhausted, State}.
 
@@ -161,19 +123,18 @@ exhausted(_Event, _From, State) ->
 %%          {next_state, NextStateName, NextStateData, Timeout} |
 %%          {stop, Reason, NewStateData}
 %% --------------------------------------------------------------------
-handle_event({cleanup, Pid}, _StateName, State) ->
-    busy(update, State#state{q = queue:from_list(lists:delete(Pid, queue:to_list(State#state.q))), 
-                             q_len = State#state.q_len - 1, 
-                             total = State#state.total - 1});    
-handle_event({expired, Pid}, StateName, State) ->
+handle_event({member_exited, Pid}, _StateName, State) ->
+    update_state(remove_pid(Pid, State));    
+handle_event({member_expired, Pid}, StateName, State) ->
     case queue:member(Pid, State#state.q) of
-        true -> handle_event({cleanup, Pid}, StateName, State);
+        true -> update_state(remove_pid(Pid, State));
         false -> {next_state, StateName, State#state{expired = [Pid | State#state.expired]}}
     end;   
-handle_event({timed_out, Pid}, StateName, State) ->
+handle_event({member_timed_out, Pid}, _StateName, State) ->
     try
-        State#state.q_len > State#state.min_pool_size orelse throw(ready),
-        handle_event({cleanup, Pid}, StateName, State)
+        Config = State#state.config,
+        State#state.q_len > Config#config.min_pool_size orelse throw(ready),
+        update_state(remove_pid(Pid, State))
     catch
         throw:ready -> {next_state, ready, State}
     end;
@@ -230,28 +191,62 @@ new_connection(#state{} = State, Count) ->
 new_connection(#state{} = _State, 0, Acc) ->
     Acc;
 new_connection(#state{} = State, Count, Acc) ->
-    case supervisor:start_child(pooly_member_sup, [State#state.ma, 
-                                                   State#state.max_idle_time, 
-                                                   State#state.max_age]) of
+    Config = State#state.config,    
+    case supervisor:start_child(State#state.sup_name, [State#state.name, {Config#config.module, Config#config.args}, 
+                                                   Config#config.idle_timeout, 
+                                                   Config#config.max_age]) of
         {ok, Pid} when is_pid(Pid) -> new_connection(State, Count - 1, [Pid | Acc]);
         {ok, Pid, _} when is_pid(Pid) -> new_connection(State, Count - 1, [Pid | Acc]);
         E -> exit(E)
     end.
 
-check_in(CPid, #state{} = State) ->
+internal_check_in(CPid, #state{} = State) ->
     Q = State#state.q,
     QLen = State#state.q_len,
     case lists:keytake(CPid, 1, State#state.out) of
         {value, {_, Pid}, Out} ->
             case lists:member(Pid, State#state.expired) of
                 true -> 
-                    ok = supervisor:terminate_child(pooly_member_sup, Pid),
-                    State#state{total = State#state.total - 1, 
-                                expired = lists:delete(Pid, State#state.expired), 
-                                out = Out};
+                    remove_pid(Pid, State#state{expired = lists:delete(Pid, State#state.expired), 
+                                                out = Out});
                 false ->
                     pooly_member:deactivate(Pid),
                     State#state{q = queue:in(Pid, Q), q_len = QLen + 1, out = Out}
             end;
         false -> State
+    end.
+
+remove_pid(Pid, State) ->
+    case supervisor:terminate_child(State#state.sup_name, Pid) of
+        ok -> ok;
+        {error, not_found} -> ok
+    end,
+    State2 = case queue:member(Pid, State#state.q) of
+                 true ->
+                     State#state{q = queue:from_list(lists:delete(Pid, queue:to_list(State#state.q))),
+                                 q_len = State#state.q_len - 1};
+                 false ->
+                     State
+             end,
+    
+    State2#state{total = State2#state.total - 1}.
+
+update_state(#state{} = State) ->
+    Config = State#state.config,
+    try
+        State#state.q_len < Config#config.min_pool_size orelse throw(ready),
+        
+        MaxPoolSize = Config#config.max_pool_size,
+        Total = State#state.total,
+        Diff = MaxPoolSize - Total,             
+        Diff + State#state.q_len > 0 orelse throw(exhausted),
+        
+        Increment = erlang:min(Config#config.acquire_increment, Diff),      
+        {next_state, ready, State#state{q = queue:join(State#state.q,
+                                                       queue:from_list(new_connection(State, Increment))),
+                                        q_len = State#state.q_len + Increment,
+                                        total = Total + Increment}}     
+    catch
+        throw:exhausted -> {next_state, exhausted, State};
+        throw:ready -> {next_state, ready, State}
     end.

@@ -9,19 +9,20 @@
 {max_age, infinity}.
 
 %% Pool Worker Setup
-{pool1, 
+{poolName1, 
     [
-        {module, riakc_pb_socket},
-        {args, ["192.168.1.6", 8087, [auto_reconnect]]},
+        {module, my_module},
+        {args, [my_args]},
         {idle_timeout, 5000}
     ]
 }.
 
-{pool2, 
+{poolName2, 
     [
-        {module, riakc_pb_socket},
-        {args, ["192.168.1.6", 8087, [auto_reconnect]]},
+        {module, my_other_module},
+        {args, [my_other_args]},
         {max_pool_size, 10},
-        {max_age, 20000}
+        {idle_timeout, 60000},
+        {max_age, 7200000}
     ] 
 }.

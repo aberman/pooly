@@ -8,14 +8,16 @@
 
 -behaviour(supervisor).
 
--export([start_link/0, init/1]).
+-export([start_link/2, init/1]).
 
-start_link() ->
-    supervisor:start_link({local, ?MODULE}, ?MODULE, []).
+-include("record.hrl").
 
-init([]) ->
-    Pooly = {pooly, {pooly, start_link, []},
+start_link(Name, #config{} = Config) ->
+    supervisor:start_link(?MODULE, [Name, Config]).
+
+init([Name, #config{} = Config]) ->
+    Pooly = {pooly, {pooly, start_link, [Name, Config]},
             permanent, 5000, worker, [pooly]},
-    PoolSup = {pooly_member_sup, {pooly_member_sup, start_link, []},
+    PoolSup = {pooly_member_sup, {pooly_member_sup, start_link, [Name]},
                 permanent, 5000, supervisor, [pooly_member_sup]},
     {ok, {{one_for_all, 5, 10}, [PoolSup, Pooly]}}.

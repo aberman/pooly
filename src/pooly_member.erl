@@ -13,7 +13,7 @@
 %% ------------------------------------------------------------------
 
 -export([
-         start_link/3, 
+         start_link/4, 
          activate/1,
          deactivate/1
         ]).
@@ -35,14 +35,14 @@
          idle/2
         ]).
 
--record(state, {pid, timer, idle_timeout, max_age}).
+-record(state, {name, pid, timer, idle_timeout, max_age}).
 
 %% ------------------------------------------------------------------
 %% API Function Definitions
 %% ------------------------------------------------------------------
 
-start_link(MA, IdleTimeout, MaxAge) ->	
-    gen_fsm:start_link(?MODULE, [MA, IdleTimeout, MaxAge], []).
+start_link(Name, MA, IdleTimeout, MaxAge) ->	
+    gen_fsm:start_link(?MODULE, [Name, MA, IdleTimeout, MaxAge], []).
 
 activate(Pid) ->
     gen_fsm:sync_send_event(Pid, activate).
@@ -54,18 +54,20 @@ deactivate(Pid) ->
 %% gen_fsm Function Definitions
 %% ------------------------------------------------------------------
 
-init([{M, A}, IdleTimeout, MaxAge]) ->
-    process_flag(trap_exit, true),
+init([Name, {M, A}, IdleTimeout, MaxAge]) ->    
     {ok, Pid} = erlang:apply(M, start_link, A),        
     erlang:link(Pid),
+    process_flag(trap_exit, true),
     
     case MaxAge > 0 andalso MaxAge =/= infinity of
         false ->
-            {ok, idle, #state{pid = Pid, 
+            {ok, idle, #state{name = Name,
+                              pid = Pid, 
                               idle_timeout = IdleTimeout, 
                               max_age = MaxAge}, IdleTimeout};        
         true ->
-            {ok, idle, #state{pid = Pid, 
+            {ok, idle, #state{name = Name,
+                              pid = Pid, 
                               idle_timeout = IdleTimeout, 
                               max_age = MaxAge, 
                               timer = erlang:send_after(MaxAge, self(), expired)}, IdleTimeout}
@@ -76,16 +78,13 @@ idle(activate, _From, State) ->
 idle(_Event, _From, State) ->
     {next_state, idle, State, State#state.idle_timeout}.
 
-idle(timeout, State) -> 
-    %% Send message that I timed out but don't necessarily quit, let pooly terminate me
-    error_logger:info_msg("~s timed out", [pid_to_list(self())]),
-    
-    case State#state.timer of
-        undefined -> ok;
-        Timer -> erlang:cancel_timer(Timer)
-    end,
-    gen_fsm:send_all_state_event(pooly, {timed_out, self()}),
-    {next_state, idle, State};
+idle(timeout, State) ->
+%%     case State#state.timer of
+%%         undefined -> ok;
+%%         Timer -> erlang:cancel_timer(Timer)
+%%     end,
+    gen_fsm:send_all_state_event(State#state.name, {member_timed_out, self()}),
+    {next_state, idle, State, State#state.idle_timeout};
 idle(_Event, State) ->
     {next_state, idle, State}.
 
@@ -102,19 +101,16 @@ handle_event(_Event, State_Name, State) ->
 handle_sync_event(_Event, _From, StateName, State) ->
     {next_state, StateName, State}.
 
-handle_info({'EXIT', Pid, _Reason}, _StateName, State) ->     
-    error_logger:info_msg("~s exited", [pid_to_list(Pid)]),
-    gen_fsm:send_all_state_event(pooly, {cleanup, self()}),
+handle_info({'EXIT', _Pid, _Reason}, _StateName, State) ->     
+    gen_fsm:send_all_state_event(State#state.name, {member_exited, self()}),
     {stop, normal, State};
-handle_info(expired, StateName, State) ->
-    error_logger:info_msg("~s expired", [self()]),
-    gen_fsm:send_all_state_event(pooly, {expired, self()}),
+handle_info(expired, StateName, State) ->    
+    gen_fsm:send_all_state_event(State#state.name, {member_expired, self()}),
     {next_state, StateName, State};
 handle_info(_Info, StateName, State) ->
     {next_state, StateName, State}.
 
-terminate(_Reason, _StateName, State) ->
-    riakc_pb_socket:stop(State#state.pid),
+terminate(_Reason, _StateName, _State) ->    
     ok.
 
 code_change(_OldVsn, StateName, State, _Extra) ->
