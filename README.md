@@ -54,12 +54,17 @@ pooly:check_out(PoolName)
 pooly:check_in(PoolName, Pid) -> ok
 ```
 
-#### Retrieve the number of available workers (size of queue):
+#### Retrieve the number of available processes:
 ```
-pooly:size(PoolName) -> {ok, integer()}
+pooly:idle_count(PoolName) -> {ok, integer()}
 ```
 
-#### Returns the total number of workers the pool is managing (available and busy workers):
+#### Retrieve the number of busy processes:
+```
+pooly:busy_count(PoolName) -> {ok, integer()}
+```
+
+#### Returns the total number of workers the pool is managing (busy + available):
 ```
 pooly:total(PoolName) -> {ok, integer()}
 ```

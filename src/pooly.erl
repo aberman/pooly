@@ -18,8 +18,9 @@
          start_link/2,		 
          check_in/2,
          check_out/1,
-         size/1,
-         total/1
+         busy_count/1,
+         idle_count/1,
+         total_count/1
         ]).
 
 %% gen_fsm callbacks
@@ -47,11 +48,14 @@
 start_link(Name, #config{} = Config) ->
     gen_fsm:start_link({local, Name}, ?MODULE, [Config, Name], []).
 
-size(Name) ->
-    gen_fsm:sync_send_all_state_event(Name, size).
+idle_count(Name) ->
+    gen_fsm:sync_send_all_state_event(Name, idle_count).
 
-total(Name) ->
-    gen_fsm:sync_send_all_state_event(Name, total).
+busy_count(Name) ->
+    gen_fsm:sync_send_all_state_event(Name, busy_count).
+
+total_count(Name) ->
+    gen_fsm:sync_send_all_state_event(Name, total_count).
 
 check_out(Name) ->
     Reply = gen_fsm:sync_send_event(Name, check_out),
@@ -82,7 +86,7 @@ init([#config{} = Config, Name]) ->
                    total = InitialPoolSize,
                    name = Name,
                    sup_name = list_to_existing_atom(NameStr ++ "_sup")},
-    {ok, ready, State#state{q = queue:from_list(new_connection(State, InitialPoolSize))}}.
+    {ok, ready, State#state{q = queue:from_list(new_process(State, InitialPoolSize))}}.
 
 ready({check_in, Pid}, State) ->	
     {next_state, ready, internal_check_in(Pid, State)};
@@ -150,9 +154,11 @@ handle_event(_Event, StateName, State) ->
 %%          {stop, Reason, NewStateData}                          |
 %%          {stop, Reason, Reply, NewStateData}
 %% --------------------------------------------------------------------
-handle_sync_event(size, _From, StateName, State) ->
+handle_sync_event(idle_count, _From, StateName, State) ->
     {reply, {ok, State#state.q_len}, StateName, State};
-handle_sync_event(total, _From, StateName, State) ->
+handle_sync_event(busy_count, _From, StateName, State) ->
+    {reply, {ok, State#state.total - State#state.q_len}, StateName, State};
+handle_sync_event(total_count, _From, StateName, State) ->
     {reply, {ok, State#state.total}, StateName, State};
 handle_sync_event(_Event, _From, StateName, StateData) ->   
     {reply, ok, StateName, StateData}.
@@ -185,18 +191,18 @@ code_change(_OldVsn, StateName, StateData, _Extra) ->
 %% --------------------------------------------------------------------
 %%% Internal functions
 %% --------------------------------------------------------------------
-new_connection(#state{} = State, Count) ->
-    new_connection(State, Count, []).
+new_process(#state{} = State, Count) ->
+    new_process(State, Count, []).
 
-new_connection(#state{} = _State, 0, Acc) ->
+new_process(#state{} = _State, 0, Acc) ->
     Acc;
-new_connection(#state{} = State, Count, Acc) ->
+new_process(#state{} = State, Count, Acc) ->
     Config = State#state.config,    
     case supervisor:start_child(State#state.sup_name, [State#state.name, {Config#config.module, Config#config.args}, 
                                                    Config#config.idle_timeout, 
                                                    Config#config.max_age]) of
-        {ok, Pid} when is_pid(Pid) -> new_connection(State, Count - 1, [Pid | Acc]);
-        {ok, Pid, _} when is_pid(Pid) -> new_connection(State, Count - 1, [Pid | Acc]);
+        {ok, Pid} when is_pid(Pid) -> new_process(State, Count - 1, [Pid | Acc]);
+        {ok, Pid, _} when is_pid(Pid) -> new_process(State, Count - 1, [Pid | Acc]);
         E -> exit(E)
     end.
 
@@ -243,7 +249,7 @@ update_state(#state{} = State) ->
         
         Increment = erlang:min(Config#config.acquire_increment, Diff),      
         {next_state, ready, State#state{q = queue:join(State#state.q,
-                                                       queue:from_list(new_connection(State, Increment))),
+                                                       queue:from_list(new_process(State, Increment))),
                                         q_len = State#state.q_len + Increment,
                                         total = Total + Increment}}     
     catch
