@@ -24,13 +24,12 @@
 ### Global pool tuning parameters
 All parameters are optional and the default will be used.
 
-+ *acquire_increment* - Default: 3 - Determines the number of members to acquire at a time when the pool requires more processes to fill the pool
-+ *initial_pool_size* - Default: 5 - Determines the number of members to acquire at startup
-+ *max_pool_size* - Default: infinity - Determines the maximum number of members the pool will hold.  Any requests above this will yield an error.
-+ *min_pool_size* - Default: 3 - Determines the minimum number of members the pool will hold. The pool will always have this many members in it at any time.
-+ *idle_timeout* - Default: 7200000 (2 hours, Specified in milliseconds or infinity atom) - Determines the maximum amount of time a member will remain idle.  If a member exceeds the time, it does not necessarily determine that it will be killed.  The pool will automatically decide whether it wants to kill the idle process depending on the max and min pool size.
-+ *max_age* - Default: infinity (Specified in milliseconds or infinity atom) - Determines the maximum amount of time a member will exist.  Sometimes you want the pool to expire stale processes, so you would set this configuration parameter
-according to how frequently to kill processes that your application considers stale.  If the process is checked out and it is stale, it will be killed upon check in.
++ **acquire_increment** - *Default: 3* - Determines the number of members to acquire at a time when the pool requires more processes to fill the pool
++ **initial_pool_size** - *Default: 5* - Determines the number of members to acquire at startup
++ **max_pool_size** - *Default: infinity* - Determines the maximum number of members the pool will hold.  Any requests above this will yield an error.
++ **min_pool_size** - *Default: 3* - Determines the minimum number of members the pool will hold. The pool will always have this many members in it at any time.
++ **idle_timeout** - *Default: 7200000 (2 hours, Specified in milliseconds or infinity atom)* - Determines the maximum amount of time a member will remain idle. If a member exceeds the time, it does not necessarily determine that it will be killed.  The pool will automatically decide whether it wants to kill the idle process depending on the max and min pool size.
++ **max_age** - *Default: infinity (Specified in milliseconds or infinity atom)* - Determines the maximum amount of time a member will exist.  Sometimes you want the pool to expire stale processes, so you would set this configuration parameter according to how frequently to kill processes that your application considers stale.  If the process is checked out and it is stale, it will be killed upon check in.
 
 ### Pool Worker Setup
 Any of the above global tuning parameters can be overridden for a specific pool.  The pool will only call start_link on the module specific in the parameters
@@ -43,24 +42,26 @@ See pooly.conf.sample for a sample configuration file.
 ## API
 Until I document the code, please refer here on how to use Pooly.
 
-* pooly:check_out(PoolName) 
-
+```
+pooly:check_out(PoolName) 
 -> {ok, Pid}
-
 -> {error, pool_exhausted} - The pool has reached maximum capacity as determined by the max_pool_size
-
+```
 Checks out a process from the pool.
 
-* pooly:check_in(PoolName, Pid) -> ok
-
+```
+pooly:check_in(PoolName, Pid) -> ok
+```
 Checks in a process from the pool.
 
-* pooly:size(PoolName) -> {ok, integer()}
-
+```
+pooly:size(PoolName) -> {ok, integer()}
+```
 Returns the number of available workers (size of queue)
 
-* pooly:total(PoolName) -> {ok, integer()}
-
+```
+pooly:total(PoolName) -> {ok, integer()}
+```
 Returns the total number of workers the pool is managing (available and busy workers)
 
 ## License & Copyright
