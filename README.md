@@ -22,7 +22,7 @@
 ## Configuration
 
 ### Global pool tuning parameters
-All parameters are optional and the default will be used.
+All parameters are optional.  If the parameter is absent, the default will be used.
 
 + **acquire_increment** - *Default: 3* - Determines the number of members to acquire at a time when the pool requires more processes to fill the pool
 + **initial_pool_size** - *Default: 5* - Determines the number of members to acquire at startup
@@ -32,7 +32,7 @@ All parameters are optional and the default will be used.
 + **max_age** - *Default: infinity (Specified in milliseconds or infinity atom)* - Determines the maximum amount of time a member will exist.  Sometimes you want the pool to expire stale processes, so you would set this configuration parameter according to how frequently to kill processes that your application considers stale.  If the process is checked out and it is stale, it will be killed upon check in.
 
 ### Pool Worker Setup
-Any of the above global tuning parameters can be overridden for a specific pool.  The pool will only call start_link on the module specific in the parameters
+Any of the above global tuning parameters can be overridden for a specific pool.  The pool will only call start_link on the module specified.
 
 * module - The name of the worker module
 * args - Any args that the worker module should be passed
