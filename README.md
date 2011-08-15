@@ -66,7 +66,7 @@ pooly:busy_count(PoolName) -> {ok, integer()}
 
 #### Returns the total number of workers the pool is managing (busy + available):
 ```
-pooly:total(PoolName) -> {ok, integer()}
+pooly:total_count(PoolName) -> {ok, integer()}
 ```
 
 ## License & Copyright
