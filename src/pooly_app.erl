@@ -59,7 +59,7 @@ start(_StartType, _StartArgs) ->
               end                                                                  
               , [], PoolProps),
     
-    case pooly_app_sup:start_link() of
+    case pooly_sup:start_link() of
         {ok, Pid} ->
            % [{Name, Config} | Tail] = Pools,
             lists:foreach(fun({Name, Config}) -> case supervisor:start_child(Pid, [Name, Config]) of

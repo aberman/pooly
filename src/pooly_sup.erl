@@ -2,22 +2,32 @@
 %%% Author  : Andrew Berman
 %%% Description :
 %%%
-%%% Created : Jul 29, 2011
+%%% Created : Aug 4, 2011
 %%% -------------------------------------------------------------------
 -module(pooly_sup).
 
 -behaviour(supervisor).
+%% --------------------------------------------------------------------
+%% External exports
+%% --------------------------------------------------------------------
+-export([
+		 start_link/0
+		]).
 
--export([start_link/2, init/1]).
+%% --------------------------------------------------------------------
+%% Internal exports
+%% --------------------------------------------------------------------
+-export([
+	 init/1
+        ]).
 
--include("record.hrl").
+-define(SERVER, ?MODULE).
 
-start_link(Name, #config{} = Config) ->
-    supervisor:start_link(?MODULE, [Name, Config]).
+start_link() ->
+ 	supervisor:start_link({local, ?MODULE}, ?MODULE, []).
 
-init([Name, #config{} = Config]) ->
-    Pooly = {pooly, {pooly, start_link, [Name, Config]},
-            permanent, 5000, worker, [pooly]},
-    PoolSup = {pooly_member_sup, {pooly_member_sup, start_link, [Name]},
-                permanent, 5000, supervisor, [pooly_member_sup]},
-    {ok, {{one_for_all, 5, 10}, [PoolSup, Pooly]}}.
+init([]) ->
+	Restart = {simple_one_for_one, 1, 1},
+	Child = {pooly_pool_sup, {pooly_pool_sup, start_link, []},
+				   permanent, 5000, supervisor, [pooly_pool_sup]},	
+	{ok, {Restart, [Child]}}.
