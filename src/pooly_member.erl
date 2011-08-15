@@ -15,7 +15,8 @@
 -export([
          start_link/4, 
          activate/1,
-         deactivate/1
+         deactivate/1,
+         stop/1
         ]).
 
 %% ------------------------------------------------------------------
@@ -50,6 +51,9 @@ activate(Pid) ->
 deactivate(Pid) ->
     gen_fsm:send_event(Pid, deactivate).
 
+stop(Pid) ->
+    gen_fsm:send_all_state_event(Pid, stop).
+
 %% ------------------------------------------------------------------
 %% gen_fsm Function Definitions
 %% ------------------------------------------------------------------
@@ -79,10 +83,6 @@ idle(_Event, _From, State) ->
     {next_state, idle, State, State#state.idle_timeout}.
 
 idle(timeout, State) ->
-%%     case State#state.timer of
-%%         undefined -> ok;
-%%         Timer -> erlang:cancel_timer(Timer)
-%%     end,
     gen_fsm:send_all_state_event(State#state.name, {member_timed_out, self()}),
     {next_state, idle, State, State#state.idle_timeout};
 idle(_Event, State) ->
@@ -94,6 +94,10 @@ active(_Event, State) ->
     {next_state, active, State}.
 
 handle_event(stop, _StateName, State) ->
+    case State#state.timer of
+        undefined -> ok;
+        Timer -> erlang:cancel_timer(Timer)
+    end,
     {stop, normal, State};
 handle_event(_Event, State_Name, State) ->
     {next_state, State_Name, State}.

@@ -223,10 +223,7 @@ internal_check_in(CPid, #state{} = State) ->
     end.
 
 remove_pid(Pid, State) ->
-    case supervisor:terminate_child(State#state.sup_name, Pid) of
-        ok -> ok;
-        {error, not_found} -> ok
-    end,
+    ok = pooly_member:stop(Pid),        
     State2 = case queue:member(Pid, State#state.q) of
                  true ->
                      State#state{q = queue:from_list(lists:delete(Pid, queue:to_list(State#state.q))),
