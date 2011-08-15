@@ -42,24 +42,24 @@ See pooly.conf.sample for a sample configuration file.
 ## API
 Until I document the code, please refer here on how to use Pooly.
 
-#### Check out a process from the pool.
+#### Check out a process from the pool:
 ```
 pooly:check_out(PoolName) 
 -> {ok, Pid}
 -> {error, pool_exhausted} - The pool has reached maximum capacity as determined by the max_pool_size
 ```
 
-#### Check in a process from the pool.
+#### Check in a process from the pool:
 ```
 pooly:check_in(PoolName, Pid) -> ok
 ```
 
-#### Retrieve the number of available workers (size of queue)
+#### Retrieve the number of available workers (size of queue):
 ```
 pooly:size(PoolName) -> {ok, integer()}
 ```
 
-#### Returns the total number of workers the pool is managing (available and busy workers)
+#### Returns the total number of workers the pool is managing (available and busy workers):
 ```
 pooly:total(PoolName) -> {ok, integer()}
 ```
@@ -67,6 +67,7 @@ pooly:total(PoolName) -> {ok, integer()}
 ## License & Copyright
 
 Copyright &copy;2011 Andrew Berman
+
 Licensed under the Apache License, Version 2.0 (the "License"); 
 you may not use this file except in compliance with the License. 
 You may obtain a copy of the License at http://www.apache.org/licenses/LICENSE-2.0
