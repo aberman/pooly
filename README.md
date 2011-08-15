@@ -15,8 +15,8 @@
 
 ```
 > application:start(pooly).
-> {ok, Pid} = pooly:check_out().
-> pooly:check_in(Pid).
+> {ok, Pid} = pooly:check_out(poolName).
+> pooly:check_in(poolName, Pid).
 ```
 
 ## Configuration
