@@ -15,7 +15,9 @@
 1.  Create a pooly.conf configuration file in the priv directory
 2.  Configure one or more pools in the configuration file
 3.  Create an app config file for your application which includes:
+
 ```
+
     [{pooly, [{config_file, LocationOfFile}]}].
 
     e.g. [{pooly, [{config_file, "priv/pooly.conf"}]}].
