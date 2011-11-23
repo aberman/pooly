@@ -2,16 +2,27 @@
 
 ### Recent changes
 
+#### 11/23/2011
+* Changed application to look for an environment variable to tell it where the pooly.conf file is located.  This should improve portability when included in other applications.
+
 #### 8/14/2011
 * Added support for multiple pools
 * Added support for default configuration parameters but allow a pool to override a parameter
-* Added support for generic OTP compliant pools 
+* Added support for generic OTP compliant pools
 
 ## Quick Start
 
 1.  Create a pooly.conf configuration file in the priv directory
 2.  Configure one or more pools in the configuration file
-3.  Start up erlang
+3.  Create an app config file for your application which includes:
+```
+    [{pooly, [{config_file, LocationOfFile}]}].
+
+    e.g. [{pooly, [{config_file, "priv/pooly.conf"}]}].
+    This will allow pooly to use your application's priv directory as opposed to its own.
+```
+
+4.  Start up erlang using the -config directive passing it the name of your config file.  For example, if your application config file is named, myApp.config, you would type: erl -config myApp
 
 ```
 > application:start(pooly).
@@ -44,7 +55,7 @@ Until I document the code, please refer here on how to use Pooly.
 
 #### Check out a process from the pool:
 ```
-pooly:check_out(PoolName) 
+pooly:check_out(PoolName)
 -> {ok, Pid}
 -> {error, pool_exhausted} - The pool has reached maximum capacity as determined by the max_pool_size
 ```
@@ -73,11 +84,11 @@ pooly:total_count(PoolName) -> {ok, integer()}
 
 Copyright &copy;2011 Andrew Berman
 
-Licensed under the Apache License, Version 2.0 (the "License"); 
-you may not use this file except in compliance with the License. 
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
 You may obtain a copy of the License at http://www.apache.org/licenses/LICENSE-2.0
 
-Unless required by applicable law or agreed to in writing, software distributed under 
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, 
-either express or implied. See the License for the specific language governing permissions and 
+Unless required by applicable law or agreed to in writing, software distributed under
+the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+either express or implied. See the License for the specific language governing permissions and
 limitations under the License.

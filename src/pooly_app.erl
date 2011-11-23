@@ -28,9 +28,11 @@
 %% Application callbacks
 %% ===================================================================
 start(_StartType, _StartArgs) ->
-    {ok, Conf} = file:consult(filename:join(
-                                [filename:dirname(code:which(?MODULE)),
-                                 "..", "priv", "pooly.conf"])),    
+    ConfigFile = case application:get_env(config_file) of
+                     undefined -> exit({config_not_set, "Set the config_file application parameter"});
+                     {ok, Val} -> Val
+                 end,
+    {ok, Conf} = file:consult(ConfigFile),    
     PoolProps = lists:filter(fun({Key, _}) -> not lists:member(Key, ?CONFIG_KEYS) end, Conf),
     % Get Any Default Settings
     DefaultConfig = #config{
