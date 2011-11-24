@@ -27,10 +27,18 @@ start_link(Name) ->
                   false -> Name
               end,
     
- 	supervisor:start_link({local, list_to_atom(NameStr ++ "_sup")}, ?MODULE, []).
+ 	supervisor:start_link({local, list_to_exsiting_atom_internal(NameStr ++ "_sup")}, ?MODULE, []).
 
 init([]) ->
 	Restart = {simple_one_for_one, 1, 1},
 	Child = {pooly_member, {pooly_member, start_link, []},
 				   temporary, brutal_kill, worker, [pooly_member]},	
 	{ok, {Restart, [Child]}}.
+
+list_to_exsiting_atom_internal(List) when is_list(List) ->
+    try
+        list_to_existing_atom(List)
+    catch 
+        error:_ -> 
+            list_to_atom(List)
+    end.

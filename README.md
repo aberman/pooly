@@ -3,6 +3,7 @@
 ### Recent changes
 
 #### 11/23/2011
+* Simplified architecture and now allow pooly_sup to be passed the config file to allow other OTP applications to supervise pooly.  To do this, supervise pooly_sup and pass it the file name for the pooly configuration.
 * Changed application to look for an environment variable to tell it where the pooly.conf file is located.  This should improve portability when included in other applications.
 
 #### 8/14/2011
@@ -17,7 +18,6 @@
 3.  Create an app config file for your application which includes:
 
 ```
-
     [{pooly, [{config_file, LocationOfFile}]}].
 
     e.g. [{pooly, [{config_file, "priv/pooly.conf"}]}].

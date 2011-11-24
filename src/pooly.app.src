@@ -7,6 +7,6 @@
                   kernel,
                   stdlib                     
                  ]},
-  {mod, { pooly_app, []}},
+  {mod, { pooly_sup, []}},
   {env, []}
  ]}.

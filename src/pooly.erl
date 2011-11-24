@@ -237,14 +237,18 @@ remove_pid(Pid, State) ->
 update_state(#state{} = State) ->
     Config = State#state.config,
     try
-        State#state.q_len < Config#config.min_pool_size orelse throw(ready),
-        
-        MaxPoolSize = Config#config.max_pool_size,
+        State#state.q_len < Config#config.min_pool_size orelse throw(ready),                
         Total = State#state.total,
-        Diff = MaxPoolSize - Total,             
-        Diff + State#state.q_len > 0 orelse throw(exhausted),
         
-        Increment = erlang:min(Config#config.acquire_increment, Diff),      
+        Increment = case Config#config.max_pool_size of
+                        infinity ->
+                            Config#config.acquire_increment;
+                        MaxPoolSize ->                
+                            Diff = MaxPoolSize - Total,             
+                            Diff + State#state.q_len > 0 orelse throw(exhausted),
+                            erlang:min(Config#config.acquire_increment, Diff)
+                    end,
+                      
         {next_state, ready, State#state{q = queue:join(State#state.q,
                                                        queue:from_list(new_process(State, Increment))),
                                         q_len = State#state.q_len + Increment,
